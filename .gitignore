@@ -4,3 +4,5 @@ package-lock.json
 tsconfig.tsbuildinfo
 npm-debug.log
 Dockerfile
+src/config/jwtRS256.key
+src/config/jwtRS256.key.pub
