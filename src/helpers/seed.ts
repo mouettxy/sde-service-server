@@ -4,7 +4,7 @@ import { Administrator } from '../shema/models/Administrator';
 import { User } from '../shema/models/User';
 import { Expeditor } from '../shema/models/Expeditor';
 import { Logist } from '../shema/models/Logist';
-import { Developer } from 'shema/models/Developer';
+import { Developer } from '../shema/models/Developer';
 import { Client, Free, Automated, Payment, ClientOrder, OrderAddress } from '../shema/models/Client';
 import dJSON from 'dirty-json';
 import { isArray } from 'util';
