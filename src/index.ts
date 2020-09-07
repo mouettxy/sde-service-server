@@ -1,31 +1,57 @@
-import configServer from './config/server';
-/* import routes from './routes'; */
-import swagger from './config/swagger';
+import 'reflect-metadata';
+import * as Server from './server';
+import * as Database from './database';
+import { buildSchema } from 'type-graphql';
 
-import gql from 'fastify-gql';
-import schema from './schema';
+import { ObjectId } from 'mongodb';
+import { ObjectIdScalar } from './helpers/object-id.scalar';
+import { TypegooseMiddleware } from './middleware/typegoose-middleware';
+import path from 'path';
 
-import fastify from './server';
-import fastifySwagger from 'fastify-swagger';
+import { UserResolver } from './shema/resolvers/user.resolver';
 
-fastify.register(gql, {
-  schema,
-  graphiql: true,
+import { seedDatabase } from './helpers/seed';
+
+console.log(`Running environment ${process.env.NODE_ENV || 'dev'}`);
+
+process.on('uncaughtException', (error: Error) => {
+  console.error(`uncaughtException ${error.message}`);
 });
 
-fastify.register(fastifySwagger, swagger.options);
-/*
-routes.forEach((route) => {
-  fastify.route(route);
-}); */
+// Catch unhandling rejected promises
+process.on('unhandledRejection', (reason: any) => {
+  console.error(reason);
+  console.error(`unhandledRejection ${reason}`);
+});
 
 const start = async () => {
   try {
-    await fastify.listen(configServer.port, '0.0.0.0');
-    fastify.swagger();
+    const database = await Database.init();
+    //await Database.init();
+    // TODO: seed database for dev proposes here
+    await database.db.dropDatabase();
+    await seedDatabase();
+
+    const schema = await buildSchema({
+      resolvers: [UserResolver],
+      emitSchemaFile: path.resolve(__dirname, 'schema.gql'),
+      globalMiddlewares: [TypegooseMiddleware],
+      scalarsMap: [{ type: ObjectId, scalar: ObjectIdScalar }],
+      validate: false,
+    });
+
+    const server = await Server.init(schema);
+    await server.start();
+    console.log('Server running at:', `http://${server.info.address}:${server.info.port}`);
+    console.log(
+      `List of all routes: ${server
+        .table()
+        .map((route) => route.path)
+        .join(', ')}`
+    );
   } catch (err) {
-    fastify.log.error(err);
-    process.exit(1);
+    console.error('Error starting server: ', err.message);
+    throw err;
   }
 };
 

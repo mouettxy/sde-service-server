@@ -1,18 +1,40 @@
-import configDatabase from './config/database';
-import * as fastify from 'fastify';
-import mongoose from 'mongoose';
-import { Server, IncomingMessage, ServerResponse } from 'http';
+import * as Hapi from 'hapi';
+import { ApolloServer } from 'apollo-server-hapi';
+import config from './config/server';
 
-const server: fastify.FastifyInstance<Server, IncomingMessage, ServerResponse> = fastify.fastify({ logger: true });
+export async function init(schema: any): Promise<Hapi.Server> {
+  try {
+    console.log('Starting Apollo Server ...');
+    const server = new ApolloServer({ schema, playground: true });
+    console.log('Apollo Server started');
 
-const mongooseOpts = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-};
+    console.log('Starting Hapi Server ...');
+    const app = new Hapi.Server({
+      debug: { request: ['error'] },
+      port: config.port,
+      routes: {
+        cors: {
+          origin: ['*'],
+        },
+      },
+    });
+    console.log('Hapi Server started');
 
-mongoose
-  .connect(configDatabase.url, mongooseOpts)
-  .then(() => console.log('MongoDB connected...'))
-  .catch((err) => console.log(err));
+    await server.applyMiddleware({
+      app,
+    });
 
-export default server;
+    await server.installSubscriptionHandlers(app.listener);
+
+    console.log('All plugins registered successfully.');
+
+    console.log('Register Routes');
+    // TODO: Routes
+    console.log('Routes registered sucessfully.');
+
+    return app;
+  } catch (err) {
+    console.log('Error starting server: ', err);
+    throw err;
+  }
+}
